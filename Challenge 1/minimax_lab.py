@@ -1,120 +1,191 @@
-# Importaciones
-import time # Permite pausar la impresion de del programa usando time.sleep para poder ver bien cada turno
-import os # Permite usar comandos del sistema operativos, en este caso limpiar la consola en cada turno
+import time
+import os
 
-# Variables iniciales
-tamaño = 10 # Indica el tamaño del tablero
-raton = (2, 2) # Idnica la posicion inicial del raton
-gato = (0, 0) # Idnica la posicion inicial del gato 
-max_turnos = 15
+# =========================
+# CONFIGURACIÓN INICIAL
+# =========================
+
+tamaño = 6
+raton = (2, 2)
+gato = (0, 0)
+max_turnos = 20
 turno = 0
+PROFUNDIDAD = 4  # profundidad del minimax
 
-# Tablero y posiciones iniciales
+
+# =========================
+# FUNCIONES DE TABLERO
+# =========================
+
 def crear_tablero(tamaño, gato, raton):
-    """Crea el tablero y coloca gato y ratón"""
     matriz = []
     for i in range(tamaño):
         fila = []
         for j in range(tamaño):
-            fila.append('.')
+            fila.append(".")
         matriz.append(fila)
-    matriz[gato[0]][gato[1]] = 'C'
-    matriz[raton[0]][raton[1]] = 'R'
+
+    matriz[gato[0]][gato[1]] = "C"
+    matriz[raton[0]][raton[1]] = "R"
     return matriz
 
+
 def imprimir_tablero(matriz):
-    """Imprime la matriz en consola"""
     for fila in matriz:
         for elemento in fila:
             print(f"{elemento:2}", end=" ")
         print()
-    print()  # Línea extra para separar turnos
+    print()
+
+
+# =========================
+# MOVIMIENTOS
+# =========================
 
 def generar_movimientos(pos, tamaño):
     fila, col = pos
-    movimientos=[]
+    movimientos = []
 
     if fila > 0:
-        movimientos.append((fila-1, col)) # si la fila es mayor a 0, se puede mover para la arriba
-    if fila < tamaño-1:
-        movimientos.append((fila+1, col)) # si la fila es menor a -1, se puede mover para la abajo
+        movimientos.append((fila - 1, col))
+    if fila < tamaño - 1:
+        movimientos.append((fila + 1, col))
     if col > 0:
-        movimientos.append((fila, col-1)) # si la columna es mayor a 0, se puede mover para izquierda
-    if col < tamaño-1:
-        movimientos.append((fila, col+1)) # si la columna es menor a -1, se puede mover para derecha
+        movimientos.append((fila, col - 1))
+    if col < tamaño - 1:
+        movimientos.append((fila, col + 1))
 
     return movimientos
 
-# Funcion de evaluacion 
-def evaluar_tablero(raton, gato):
-    fila_r, col_r = raton
-    fila_g, col_g = gato
-    return abs(fila_r - fila_g) + abs(col_r - col_g)
 
-# Movimientos del raton
-def movimiento_raton(raton, gato, tamaño):
-    posibles = generar_movimientos(raton, tamaño)
+# =========================
+# EVALUACIÓN
+# =========================
 
-    mejor_pos = raton
-    mejor_dist = evaluar_tablero(raton, gato)
+def evaluar(raton, gato):
+    # distancia Manhattan
+    return abs(raton[0] - gato[0]) + abs(raton[1] - gato[1])
 
-    for pos in posibles:
-        dist = evaluar_tablero(pos, gato)
-        if dist >= mejor_dist:
-            mejor_dist = dist 
-            mejor_pos = pos
 
-    return mejor_pos
+def es_terminal(gato, raton):
+    return gato == raton
 
-#Loop interactivo 
+
+# =========================
+# MINIMAX
+# =========================
+
+def minimax(raton, gato, profundidad, es_turno_raton):
+
+    if profundidad == 0 or es_terminal(gato, raton):
+        return evaluar(raton, gato)
+
+    if es_turno_raton:
+        # Maximiza distancia
+        mejor_valor = float("-inf")
+        for mov in generar_movimientos(raton, tamaño):
+            valor = minimax(mov, gato, profundidad - 1, False)
+            mejor_valor = max(mejor_valor, valor)
+        return mejor_valor
+
+    else:
+        # Minimiza distancia
+        mejor_valor = float("inf")
+        for mov in generar_movimientos(gato, tamaño):
+            valor = minimax(raton, mov, profundidad - 1, True)
+            mejor_valor = min(mejor_valor, valor)
+        return mejor_valor
+
+
+def mejor_movimiento_raton(raton, gato):
+    mejor_valor = float("-inf")
+    mejor_mov = raton
+
+    for mov in generar_movimientos(raton, tamaño):
+        valor = minimax(mov, gato, PROFUNDIDAD, False)
+        if valor > mejor_valor:
+            mejor_valor = valor
+            mejor_mov = mov
+
+    return mejor_mov
+
+
+def mejor_movimiento_gato(gato, raton):
+    mejor_valor = float("inf")
+    mejor_mov = gato
+
+    for mov in generar_movimientos(gato, tamaño):
+        valor = minimax(raton, mov, PROFUNDIDAD, True)
+        if valor < mejor_valor:
+            mejor_valor = valor
+            mejor_mov = mov
+
+    return mejor_mov
+
+
+# =========================
+# MOVIMIENTO USUARIO
+# =========================
+
+def mover_usuario(pos):
+    fila, col = pos
+    move = input("Mover (w/a/s/d): ")
+
+    if move == "w" and fila > 0:
+        fila -= 1
+    elif move == "s" and fila < tamaño - 1:
+        fila += 1
+    elif move == "a" and col > 0:
+        col -= 1
+    elif move == "d" and col < tamaño - 1:
+        col += 1
+
+    return (fila, col)
+
+
+# =========================
+# SELECCIÓN DE MODO
+# =========================
+
+print("Modo de juego:")
+print("1 - Automático (IA vs IA)")
+print("2 - Controlar Ratón")
+print("3 - Controlar Gato")
+
+modo = input("Selecciona 1, 2 o 3: ")
+
+# =========================
+# LOOP PRINCIPAL
+# =========================
 
 while turno < max_turnos:
-    os.system('cls') # limpieza de la consola 
 
-    print(f"Turno: {turno + 1}/{max_turnos}")
-    print()
+    os.system("cls")
+    print(f"Turno {turno + 1}/{max_turnos}\n")
 
     tablero = crear_tablero(tamaño, gato, raton)
     imprimir_tablero(tablero)
 
-    raton = movimiento_raton(raton, gato, tamaño)
+    # Movimiento ratón
+    if modo == "2":
+        raton = mover_usuario(raton)
+    else:
+        raton = mejor_movimiento_raton(raton, gato)
 
-# Movimiento automatico del gato
+    # Movimiento gato
+    if modo == "3":
+        gato = mover_usuario(gato)
+    else:
+        gato = mejor_movimiento_gato(gato, raton)
 
-    fila_gato, col_gato = gato 
-    fila_raton, col_raton = raton
-
-    if fila_gato < fila_raton:
-        fila_gato += 1
-    elif fila_gato > fila_raton:
-        fila_gato -= 1
-
-    if col_gato < col_raton:
-        col_gato += 1
-    elif col_gato > col_raton:
-        col_gato -= 1
-
-    gato = (fila_gato, col_gato)
-
-    
-
-# Comprobamos si el gato atrapo al raton
-
-    if gato == raton:
+    if es_terminal(gato, raton):
         tablero = crear_tablero(tamaño, gato, raton)
         imprimir_tablero(tablero)
-        print('¡El gato atrapó al ratón! 🐱🐭')
+        print("¡El gato atrapó al ratón! 🐱🐭")
         break
 
-    
-
-
-    print('distancia actual:', evaluar_tablero(raton, gato))
-
     turno += 1
-    time.sleep(0.5)
+    time.sleep(0.6)
 
-    if turno == max_turnos:
-        print("Se acabaron los turnos. El ratón sobrevivió 🐭✨")
-
-    
+if turno == max_turnos:
+    print("El ratón sobrevivió 🐭✨")
