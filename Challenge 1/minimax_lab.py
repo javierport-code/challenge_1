@@ -47,7 +47,7 @@ def generar_movimientos(pos, tamaño):
 # =========================
 
 def evaluar(raton, gato):
-    # Distancia Euclidiana: rompe la ambigüedad de la distancia Manhattan
+    # Distancia Manhattan
     return abs(raton[0] - gato[0]) + abs(raton[1] - gato[1])
 
 def es_terminal(gato, raton):
